@@ -1,0 +1,51 @@
+####
+attach(df)
+
+select_factors <- NULL
+
+for (i in 1:ncol(df)) {
+  mod1 <- glm(label~get(colnames(df)[i]), family = binomial(link = 'logit'))
+  fit <- summary(mod1)
+  pvalue <- fit$coefficients[8]
+  if(pvalue < 0.05)select_factors <- c(select_factors,colnames(df)[i])
+  cat(i / c(ncol(df) - 1) * 100)
+  cat('\n')
+  
+}
+
+detach(df)
+####
+
+df <- subset(df,select = c('label',select_factors))
+
+i <- 1
+
+cv.times <- 1000
+
+cv.list_snowfall <- list()
+
+#####################
+
+cv.list_snowfall <- sfLapply(1:1000,function(i){
+  
+  outcome <- df$label
+  
+  xx <- data.matrix(df[,2:ncol(df)])
+  
+  cv.fit1 = cv.glmnet(xx,outcome,family="binomial")
+  
+  coef.cv <- as.matrix(coef(cv.fit1, s = 'lambda.min'))
+  
+  coef.cv <- coef.cv[coef.cv[,1] != 0, ]
+  
+  # print(coef.cv)
+  
+  nameCoefCv <- names(coef.cv)
+  
+  if(is.null(nameCoefCv)) {nameCoefCv <- 'isNA'}
+  
+  return(nameCoefCv)
+  
+})
+
+sfStop()
